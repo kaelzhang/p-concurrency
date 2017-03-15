@@ -34,7 +34,7 @@ async function get (n) {
 }
 
 // or
-get = concurrency(3)(get)
+get = concurrency(1)(get)
 
 // only one promise is run at once
 Promise.all([
