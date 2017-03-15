@@ -29,7 +29,13 @@ test('bad options', t => {
     concurrency({
       concurrency: '1'
     })
-  }, 'concurrency must be a number')
+  }, 'concurrency must be a number from 1 and up')
+
+  throws(t, () => {
+    concurrency({
+      concurrency: 0
+    })
+  }, 'concurrency must be a number from 1 and up')
 })
 
 

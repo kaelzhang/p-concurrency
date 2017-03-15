@@ -1,6 +1,6 @@
 {
   "name": "p-concurrency",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Decorate an async function with limited concurrency, which can be used as the decorator in the future.",
   "main": "index.js",
   "scripts": {

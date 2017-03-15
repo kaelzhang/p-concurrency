@@ -21,8 +21,8 @@ module.exports = function (options) {
     counter_key = KEY_COUNTER
   } = options
 
-  if (typeof concurrency !== 'number') {
-    throw new TypeError('concurrency must be a number')
+  if (typeof concurrency !== 'number' || concurrency < 1) {
+    throw new TypeError('concurrency must be a number from 1 and up')
   }
 
 
