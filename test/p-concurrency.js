@@ -1,7 +1,10 @@
-const test = require('ava')
-const concurrency = require('..')
-const delay = require('delay')
+'use strict'
 
+const test = require('ava')
+const delay = require('delay')
+const Q = require('q')
+
+const {concurrency} = require('..')
 
 function throws (t, fn, message) {
   try {
@@ -39,9 +42,9 @@ test('bad options', t => {
 })
 
 
-test('normal functions', t => {
+const run = (t, MAX, options) => {
   let counter = 0
-  const MAX = 2
+
   const fn = function (a, b) {
     counter ++
 
@@ -58,13 +61,70 @@ test('normal functions', t => {
     })
   }
 
-  const wrapped = concurrency(MAX)(fn)
+  let arg
+
+  if (options) {
+    arg = {
+      ...options,
+      concurrency: MAX
+    }
+  } else {
+    arg = MAX
+  }
+
+  const wrapped = concurrency(arg)(fn)
   return Promise.all([
     wrapped(1, 1),
     wrapped(1, 2),
     wrapped(1, 3)
   ]).then((result) => {
     t.deepEqual(result, [2, 3, 4], 'wrong result')
+  })
+}
+
+test('normal functions', t => {
+  run(t, 2)
+})
+
+
+test('when', async t => {
+  let count = 0
+  let max = - 1
+
+  const fn = concurrency({
+    concurrency: 1,
+    when (n) {
+      return n < 3
+    }
+  })(async n => {
+    count ++
+    max = Math.max(max, count)
+
+    await delay(100)
+
+    count --
+  })
+
+  const tasks = []
+  let task_count = 50
+
+  while (task_count > 0) {
+    tasks.push(fn(task_count --))
+  }
+
+  await Promise.all(tasks)
+
+  t.is(max, 49)
+})
+
+
+test('with q', async t => {
+  run(t, 2, {
+    promise (callback) {
+      const defer = Q.defer()
+      callback(x => defer.resolve(x), x => defer.reject(x))
+      return defer.promise
+    }
   })
 })
 

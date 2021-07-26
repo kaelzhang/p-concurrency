@@ -25,7 +25,7 @@ $ npm install p-concurrency --save
 ## Usage
 
 ```js
-const concurrency = require('p-concurrency')
+const {concurrency} = require('p-concurrency')
 
 // used as a decorator
 @concurrency(1)
@@ -46,7 +46,7 @@ Promise.all([
 })
 ```
 
-## It can also be used with classes
+### It can also be used with classes
 
 ```js
 class Foo {
@@ -68,7 +68,7 @@ Promise.all([
 })
 ```
 
-## Use as no decorators with classes
+### Use as no decorators with classes
 
 ```js
 class Foo {
@@ -81,6 +81,38 @@ class Foo {
   }
 }
 ```
+
+Or (recommended)
+
+```js
+class Foo {
+  async bar (n) {
+    return await remoteGetSomething(n)
+  }
+}
+
+const {prototype} = Foo
+prototype.bar = concurrency(1)(prototype.bar)
+```
+
+## concurrency(max)
+
+Which is equivalent to:
+
+```js
+concurrency({
+  concurrency: max
+})
+```
+
+## concurrency(options)
+
+- **options**
+  - **concurrency** `number` max concurrency
+  - **promise** `Function (handler: Function)`
+  - **when?** `Function (): bool`
+  - **global?** `boolean = false` use global concurrency limiter. If `true`, all instances of a class will share a same concurrency queue
+  - **key** `string | Symbol` the key to save the queue
 
 ## License
 

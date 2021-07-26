@@ -1,11 +1,13 @@
-const symbol = typeof Symbol === 'undefined'
-  ? key => key
-  : key => Symbol.for(key)
+'use strict'
 
-const KEY_STACK = symbol('p-concurrency:stack')
-const KEY_COUNTER = symbol('p-concurrency:counter')
+const KEY = Symbol('p-concurrency:queue')
 
-module.exports = options => {
+const DEFAULT_WHEN = () => true
+const NEW_PROMISE = handler => new Promise(handler)
+
+exports.KEY = KEY
+
+exports.concurrency = options => {
   if (typeof options === 'number') {
     options = {
       concurrency: options
@@ -18,9 +20,10 @@ module.exports = options => {
   const {
     concurrency,
     // Whether to use global queue
-    global = false,
-    stack_key = KEY_STACK,
-    counter_key = KEY_COUNTER
+    global: use_global_host = false,
+    when = DEFAULT_WHEN,
+    promise: promise_factory = NEW_PROMISE,
+    key = KEY
   } = options
 
   if (typeof concurrency !== 'number' || concurrency < 1) {
@@ -30,25 +33,35 @@ module.exports = options => {
 
   return fn => {
     function limit (...args) {
-      const host = !!this && !global
+      if (!when.apply(this, args)) {
+        // Should not be limited
+        return fn.apply(this, args)
+      }
+
+      const host = !!this && !use_global_host
         ? this
         : limit
 
-      if (!(counter_key in host)) {
-        host[counter_key] = 0
-      }
+      const info = host[key] || (
+        host[key] = {
+          size: 0,
+          queue: []
+        }
+      )
 
-      const queue = host[stack_key] || (host[stack_key] = [])
+      const {queue} = info
+
       const next = () => {
-        host[counter_key] --
+        info.size --
+
         if (queue.length > 0) {
           queue.shift()()
         }
       }
 
-      return new Promise ((resolve, reject) => {
+      return promise_factory((resolve, reject) => {
         const run = () => {
-          host[counter_key] ++
+          info.size ++
 
           fn.apply(this, args).then(
             value => {
@@ -62,7 +75,7 @@ module.exports = options => {
           )
         }
 
-        if (host[counter_key] < concurrency) {
+        if (info.size < concurrency) {
           run()
         } else {
           queue.push(run)
