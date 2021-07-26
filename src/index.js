@@ -5,7 +5,7 @@ const symbol = typeof Symbol === 'undefined'
 const KEY_STACK = symbol('p-concurrency:stack')
 const KEY_COUNTER = symbol('p-concurrency:counter')
 
-module.exports = function (options) {
+module.exports = options => {
   if (typeof options === 'number') {
     options = {
       concurrency: options
@@ -17,6 +17,8 @@ module.exports = function (options) {
 
   const {
     concurrency,
+    // Whether to use global queue
+    global = false,
     stack_key = KEY_STACK,
     counter_key = KEY_COUNTER
   } = options
@@ -27,14 +29,10 @@ module.exports = function (options) {
 
 
   return fn => {
-    const fake_host = {}
-
-    return function () {
-      const args = arguments
-      const has_context = !!this
-      const host = has_context
+    function limit (...args) {
+      const host = !!this && !global
         ? this
-        : fake_host
+        : limit
 
       if (!(counter_key in host)) {
         host[counter_key] = 0
@@ -71,5 +69,7 @@ module.exports = function (options) {
         }
       })
     }
+
+    return limit
   }
 }
