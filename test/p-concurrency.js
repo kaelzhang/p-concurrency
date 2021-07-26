@@ -4,7 +4,7 @@ const test = require('ava')
 const delay = require('delay')
 const Q = require('q')
 
-const {concurrency} = require('..')
+const {concurrency, KEY} = require('..')
 
 function throws (t, fn, message) {
   try {
@@ -42,7 +42,7 @@ test('bad options', t => {
 })
 
 
-const run = (t, MAX, options) => {
+const run = async (t, MAX, options) => {
   let counter = 0
 
   const fn = function (a, b) {
@@ -72,18 +72,30 @@ const run = (t, MAX, options) => {
     arg = MAX
   }
 
-  const wrapped = concurrency(arg)(fn)
-  return Promise.all([
+  const limiter = concurrency(arg)
+
+  const wrapped = limiter(fn)
+  await Promise.all([
     wrapped(1, 1),
     wrapped(1, 2),
     wrapped(1, 3)
   ]).then((result) => {
     t.deepEqual(result, [2, 3, 4], 'wrong result')
   })
+
+  return wrapped
 }
 
-test('normal functions', t => {
-  run(t, 2)
+test('normal functions', async t => {
+  const wrapped = await run(t, 2)
+
+  t.deepEqual(wrapped[KEY], {size: 0, queue: []})
+
+  const wrapped2 = await run(t, 2, {
+    key: 'my-key'
+  })
+
+  t.deepEqual(wrapped2['my-key'], {size: 0, queue: []})
 })
 
 
@@ -119,7 +131,7 @@ test('when', async t => {
 
 
 test('with q', async t => {
-  run(t, 2, {
+  await run(t, 2, {
     promise (callback) {
       const defer = Q.defer()
       callback(x => defer.resolve(x), x => defer.reject(x))
