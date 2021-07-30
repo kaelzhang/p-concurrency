@@ -1,6 +1,7 @@
 # babel dist
 /lib
 .nyc_output
+*.tgz
 
 # Node
 package-lock.json

@@ -1,8 +1,11 @@
 {
   "name": "p-concurrency",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Decorate an async function with limited concurrency, which can be used as the decorator in the future.",
   "main": "src/index.js",
+  "files": [
+    "src"
+  ],
   "scripts": {
     "test": "NODE_DEBUG=p-find-index nyc ava --timeout=10s --verbose",
     "test:dev": "NODE_DEBUG=p-find-index nyc ava --timeout=10s --verbose && npm run report:dev",
