@@ -31,8 +31,8 @@ exports.concurrency = options => {
   }
 
 
-  return fn => {
-    function limit (...args) {
+  const limiter = fn => {
+    function limited (...args) {
       if (!when.apply(this, args)) {
         // Should not be limited
         return fn.apply(this, args)
@@ -40,7 +40,7 @@ exports.concurrency = options => {
 
       const host = !!this && !use_global_host
         ? this
-        : limit
+        : limiter
 
       const info = host[key] || (
         host[key] = {
@@ -48,6 +48,8 @@ exports.concurrency = options => {
           queue: []
         }
       )
+
+      // console.log(host, info)
 
       const {queue} = info
 
@@ -83,6 +85,8 @@ exports.concurrency = options => {
       })
     }
 
-    return limit
+    return limited
   }
+
+  return limiter
 }

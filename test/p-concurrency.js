@@ -75,6 +75,8 @@ const run = async (t, MAX, options) => {
   const limiter = concurrency(arg)
 
   const wrapped = limiter(fn)
+  wrapped.limiter = limiter
+
   await Promise.all([
     wrapped(1, 1),
     wrapped(1, 2),
@@ -89,13 +91,13 @@ const run = async (t, MAX, options) => {
 test('normal functions', async t => {
   const wrapped = await run(t, 2)
 
-  t.deepEqual(wrapped[KEY], {size: 0, queue: []})
+  t.deepEqual(wrapped.limiter[KEY], {size: 0, queue: []})
 
   const wrapped2 = await run(t, 2, {
     key: 'my-key'
   })
 
-  t.deepEqual(wrapped2['my-key'], {size: 0, queue: []})
+  t.deepEqual(wrapped2.limiter['my-key'], {size: 0, queue: []})
 })
 
 
@@ -250,7 +252,7 @@ test('reject with context', t => {
 })
 
 test('global + when', async t => {
-  const limit = concurrency({
+  const limiter = concurrency({
     concurrency: 1,
     when ({url}) {
       return url.endsWith('/stamp')
@@ -261,7 +263,7 @@ test('global + when', async t => {
   let count = 0
 
   class HTTP {
-    async request () {
+    async _request () {
       count ++
 
       if (count > 1) {
@@ -272,22 +274,33 @@ test('global + when', async t => {
 
       count --
     }
+
+    get (...args) {
+      return this._request(...args)
+    }
+
+    post (...args) {
+      return this._request(...args)
+    }
   }
 
-  HTTP.prototype.request = limit(HTTP.prototype.request)
+  HTTP.prototype.get = limiter(HTTP.prototype.get)
+  HTTP.prototype.post = limiter(HTTP.prototype.post)
 
   const h1 = new HTTP()
   const h2 = new HTTP()
 
-  let test_count = 20
+  let test_count = 3
   const tasks = []
   const options = {
     url: '/a/stamp'
   }
 
   while (test_count -- > 0) {
-    tasks.push(h1.request(options))
-    tasks.push(h2.request(options))
+    tasks.push(h1.get(options))
+    tasks.push(h1.post(options))
+    tasks.push(h2.get(options))
+    tasks.push(h2.post(options))
   }
 
   await Promise.all(tasks)
