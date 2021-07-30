@@ -248,3 +248,48 @@ test('reject with context', t => {
     t.is(result, 200, 'test error message')
   })
 })
+
+test('global + when', async t => {
+  const limit = concurrency({
+    concurrency: 1,
+    when ({url}) {
+      return url.endsWith('/stamp')
+    },
+    global: true
+  })
+
+  let count = 0
+
+  class HTTP {
+    async request () {
+      count ++
+
+      if (count > 1) {
+        throw new Error('booooooooom')
+      }
+
+      await delay(10)
+
+      count --
+    }
+  }
+
+  HTTP.prototype.request = limit(HTTP.prototype.request)
+
+  const h1 = new HTTP()
+  const h2 = new HTTP()
+
+  let test_count = 20
+  const tasks = []
+  const options = {
+    url: '/a/stamp'
+  }
+
+  while (test_count -- > 0) {
+    tasks.push(h1.request(options))
+    tasks.push(h2.request(options))
+  }
+
+  await Promise.all(tasks)
+  t.pass()
+})
